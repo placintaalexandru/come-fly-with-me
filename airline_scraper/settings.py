@@ -111,15 +111,6 @@ AUTOTHROTTLE_TARGET_CONCURRENCY = 0.5
 RETRY_TIMES = 0
 
 DOWNLOADER_MIDDLEWARES = {
-    # 'scrapy.downloadermiddlewares.httpauth.HttpAuthMiddleware': None,
-    # 'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,
-    # 'scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware': None,
-    # 'scrapy.downloadermiddlewares.defaultheaders.DefaultHeadersMiddleware': None,
-    # 'scrapy.downloadermiddlewares.cookies.CookiesMiddleware': None,
-    # 'scrapy.downloadermiddlewares.httpcompression.HttpCompressionMiddleware': None,
-    # 'scrapy.downloadermiddlewares.downloadtimeout.DownloadTimeoutMiddleware': None,
-    # 'scrapy.downloadermiddlewares.stats.DownloaderStats': None,
-    # 'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 403,
 }
 
 LOG_LEVEL = os.environ.get('LOG_LEVEL', logging.INFO)

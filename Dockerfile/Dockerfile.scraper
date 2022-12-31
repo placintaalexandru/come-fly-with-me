@@ -1,0 +1,26 @@
+FROM python:3.8.10-slim
+
+ARG USER=scraper
+ARG POETRY_HOME="/etc/poetry"
+
+RUN adduser "${USER}"
+
+RUN apt-get update && \
+    pip3 install --upgrade pip && \
+    apt-get install -y curl && \
+    curl -sSL https://install.python-poetry.org | POETRY_HOME="${POETRY_HOME}" python3 -
+
+# Required to be able to use poetry and installed Python packages by the non-root user
+ENV PATH="${POETRY_HOME}/bin:/home/${USER}/.local/bin:$PATH"
+
+USER "${USER}"
+
+WORKDIR "/${USER}"
+
+COPY airline_scraper ./airline_scraper
+
+COPY poetry.lock pyproject.toml scrapy.cfg ./
+
+RUN poetry export --without-hashes | pip3 install -r /dev/stdin --user
+
+ENTRYPOINT ["/bin/bash", "-c", "tail -f /dev/null"]
