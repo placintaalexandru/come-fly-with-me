@@ -7,8 +7,11 @@ RUN adduser "${USER}"
 
 RUN apt-get update && \
     pip3 install --upgrade pip && \
-    apt-get install -y curl && \
+    apt-get install -y curl cron procps && \
     curl -sSL https://install.python-poetry.org | POETRY_HOME="${POETRY_HOME}" python3 -
+
+RUN chmod gu+rw /var/run && \
+    chmod gu+s /usr/sbin/cron
 
 # Required to be able to use poetry and installed Python packages by the non-root user
 ENV PATH="${POETRY_HOME}/bin:/home/${USER}/.local/bin:$PATH"
@@ -17,9 +20,9 @@ USER "${USER}"
 
 WORKDIR "/${USER}"
 
-COPY airline_scraper ./airline_scraper
+COPY scrapers/scrapers ./scrapers
 
-COPY poetry.lock pyproject.toml scrapy.cfg ./
+COPY scrapers/poetry.lock scrapers/pyproject.toml scrapers/scrapy.cfg ./
 
 RUN poetry export --without-hashes | pip3 install -r /dev/stdin --user
 

@@ -2,7 +2,7 @@ import json
 import os
 from json import JSONDecodeError
 from logging import Logger
-from typing import Union, List, Tuple
+from typing import List, Tuple
 
 from scrapy.utils.project import get_project_settings
 

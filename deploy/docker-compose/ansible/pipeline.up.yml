@@ -1,0 +1,65 @@
+---
+- name: Pipeline Up
+  hosts: localhost
+  tasks:
+    - name: Check Dependencies
+      block:
+        - name: Check clickhouse-client is installed
+          ansible.builtin.command: clickhouse-client --version
+          changed_when: false
+
+        - name: Check docker compose is installed
+          ansible.builtin.command: docker compose version
+          changed_when: false
+
+    - name: Set Facts
+      ansible.builtin.set_fact:
+        kafka_bootstrap_brokers: 'kafka:9092'
+        zookeeper: 'zookeeper:2181'
+        kafka_topics:
+          - flights
+
+    - name: Deploy Infra
+      ansible.builtin.command: >-
+        docker compose -f ../docker-compose.yml up --detach --build --force-recreate
+      changed_when: false
+
+    - name: Init Kafka
+      block:
+        - name: Add container to inventory
+          ansible.builtin.add_host:
+            name: kafka
+            ansible_connection: docker
+
+        - name: Create Topics
+          delegate_to: kafka
+          ansible.builtin.raw: >-
+            kafka-topics.sh --bootstrap-server {{ kafka_bootstrap_brokers }}
+            --create --if-not-exists --topic {{ item }}
+            --replication-factor 1 --partitions 1
+          with_items: '{{ kafka_topics }}'
+          changed_when: false
+
+    - name: Init Clickhouse
+      block:
+        - name: Create flight_data database
+          ansible.builtin.command: >-
+            clickhouse-client --host=localhost --port=19000
+            --queries-file ../../../clickhouse/flight_data/db.up.sql
+          changed_when: false
+
+        - name: Create flights table
+          block:
+            - name: Create table
+              ansible.builtin.command: >-
+                clickhouse-client --host=localhost --port=19000
+                --queries-file
+                ../../../clickhouse/flight_data/flights/table.up.sql
+              changed_when: false
+
+            - name: Create kafka consumer
+              ansible.builtin.command: >-
+                clickhouse-client --host=localhost --port=19000
+                --queries-file
+                ../../../clickhouse/flight_data/flights/kafka_consumer.up.sql
+              changed_when: false
