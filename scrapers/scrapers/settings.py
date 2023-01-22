@@ -1,4 +1,4 @@
-# Scrapy settings for airline_scraper project
+# Scrapy settings for scrapers project
 #
 # For simplicity, this file contains only settings considered important or
 # commonly used. You can find more settings consulting the documentation:
@@ -12,8 +12,8 @@ from datetime import timedelta
 
 # BOT_NAME = 'airline_scraper'
 
-SPIDER_MODULES = ['airline_scraper.spiders']
-NEWSPIDER_MODULE = 'airline_scraper.spiders'
+SPIDER_MODULES = ['scrapers.spiders']
+NEWSPIDER_MODULE = 'scrapers.spiders'
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 # USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
@@ -47,13 +47,13 @@ ROBOTSTXT_OBEY = False
 # Enable or disable spider middlewares
 # See https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 # SPIDER_MIDDLEWARES = {
-#    'airline_scraper.middlewares.AirlineScraperSpiderMiddleware': 543,
+#    'scrapers.middlewares.AirlineScraperSpiderMiddleware': 543,
 # }
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 # DOWNLOADER_MIDDLEWARES = {
-#    'airline_scraper.middlewares.AirlineScraperDownloaderMiddleware': 543,
+#    'scrapers.middlewares.AirlineScraperDownloaderMiddleware': 543,
 # }
 
 # Enable or disable extensions
@@ -64,9 +64,9 @@ ROBOTSTXT_OBEY = False
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-# ITEM_PIPELINES = {
-#    'airline_scraper.pipelines.AirlineScraperPipeline': 300,
-# }
+ITEM_PIPELINES = {
+    'scrapers.pipelines.AirlineScraperPipeline': 300,
+}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html

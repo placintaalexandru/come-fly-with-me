@@ -1,0 +1,106 @@
+---
+version: "3.9"
+
+networks:
+  scraper-kafka:
+    driver: bridge
+  kafka-zookeeper:
+    driver: bridge
+  kafka-clickhouse:
+    driver: bridge
+  clickhouse-grafana:
+    driver: bridge
+
+services:
+  zookeeper:
+    container_name: zookeeper
+    image: 'bitnami/zookeeper:3.6.4'
+    networks:
+      - kafka-zookeeper
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+
+  kafka:
+    depends_on:
+      - zookeeper
+    container_name: kafka
+    image: 'bitnami/kafka:3.3.1'
+    networks:
+      - kafka-zookeeper
+      - scraper-kafka
+      - kafka-clickhouse
+    ports:
+      - '9092:9092'
+      - '9093:9093'
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENERS=DOCKER://:9092,EXTERNAL://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=DOCKER://:9092,EXTERNAL://localhost:9093
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=DOCKER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=DOCKER
+
+  scrapers:
+    depends_on:
+      - kafka
+    container_name: scrapers
+    build:
+      context: ../..
+      dockerfile: scrapers/Dockerfile/Dockerfile.scraper
+    networks:
+      - scraper-kafka
+
+    # TODO: Look into making this nicer (issue: env does not propagate into crontab)
+    # TODO: Look into how to grab logs when crontab runs
+    entrypoint: [
+      '/bin/bash', '-c',
+      'cron && 
+      cd /scraper &&
+      printenv | sed "s/^\(.*\)$/export \1/g" > project_env &&
+      echo "20 17 * * * cd /scraper && export KAFKA_BOOTSTRAP_BROKERS=$(cat project_env | grep KAFKA_BOOTSTRAP_BROKERS | cut -d "=" -f 2) && export PAIRS_TO_SCRAPE=$(cat project_env | grep PAIRS_TO_SCRAPE | cut -d "=" -f 2) && export KAFKA_TOPIC=$(cat project_env | grep KAFKA_TOPIC | cut -d "=" -f 2) && /home/scraper/.local/bin/scrapy crawl WizzAir" > cron.txt &&
+      echo "20 17 * * * cd /scraper && export KAFKA_BOOTSTRAP_BROKERS=$(cat project_env | grep KAFKA_BOOTSTRAP_BROKERS | cut -d "=" -f 2) && export PAIRS_TO_SCRAPE=$(cat project_env | grep PAIRS_TO_SCRAPE | cut -d "=" -f 2) && export KAFKA_TOPIC=$(cat project_env | grep KAFKA_TOPIC | cut -d "=" -f 2) && /home/scraper/.local/bin/scrapy crawl RyanAir" >> cron.txt &&
+      crontab -u $(whoami) /scraper/cron.txt &&
+      tail -f /dev/null'
+    ]
+    environment:
+      - KAFKA_BOOTSTRAP_BROKERS='kafka:9092'
+      - PAIRS_TO_SCRAPE='[["OTP", "MLA"]]'
+      - KAFKA_TOPIC='flights'
+
+  clickhouse:
+    depends_on:
+      - kafka
+    container_name: clickhouse
+    image: clickhouse/clickhouse-server:22.9.7.34-alpine
+    networks:
+      - kafka-clickhouse
+      - clickhouse-grafana
+    cap_add:
+      - SYS_NICE
+      - NET_ADMIN
+      - IPC_LOCK
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    ports:
+      - '18123:8123'
+      - '19000:9000'
+    environment:
+      - KAFKA_BOOTSTRAP_BROKERS='kafka:9092'
+      - KAFKA_TOPIC='flights'
+
+  grafana:
+    depends_on:
+      - clickhouse
+    container_name: grafana
+    image: grafana/grafana:9.3.2
+    networks:
+      - clickhouse-grafana
+    ports:
+      - '3000:3000'
+    environment:
+      - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
+    volumes:
+      - ./grafana/grafana-clickhouse-datasource.yaml:/etc/grafana/provisioning/datasources/grafana-clickhouse-datasource.yaml

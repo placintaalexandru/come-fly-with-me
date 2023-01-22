@@ -11,7 +11,7 @@ from twisted.internet.error import DNSLookupError
 from twisted.internet.error import TimeoutError, TCPTimedOutError
 from scrapy.http import JsonRequest, TextResponse
 
-from airline_scraper.utils import load_pairs_to_scrape
+from .. utils import load_pairs_to_scrape
 
 
 class WizzairSpider(Spider):
@@ -85,7 +85,7 @@ class WizzairSpider(Spider):
 
         return list(
             map(lambda extra: JsonRequest(
-                    url='https://be.wizzair.com/14.4.0/Api/search/timetable',
+                    url='https://be.wizzair.com/14.6.0/Api/search/timetable',
                     method='POST',
                     callback=self.parse,
                     errback=self.error_callback,
@@ -123,7 +123,7 @@ class WizzairSpider(Spider):
         try:
             for flight in flights['outboundFlights']:
                 yield {
-                    'day': flight['departureDates'][0],
+                    'flight_date': flight['departureDates'][0],
                     'source': flight['departureStation'],
                     'destination': flight['arrivalStation'],
                     'price': flight['price']['amount'],

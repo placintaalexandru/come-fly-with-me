@@ -9,6 +9,7 @@ packages = [{include = "airline_scraper"}]
 [tool.poetry.dependencies]
 python = "^3.8"
 scrapy = "2.7.1"
+kafka-python = "2.0.2"
 
 [build-system]
 requires = ["poetry-core"]

@@ -1,0 +1,8 @@
+---
+- name: Pipeline Down
+  hosts: localhost
+  tasks:
+    - name: Tear Down Infra
+      ansible.builtin.command: >-
+        docker compose -f ../docker-compose.yml down --remove-orphans --volumes
+      changed_when: false

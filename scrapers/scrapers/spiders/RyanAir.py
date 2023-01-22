@@ -12,7 +12,7 @@ from scrapy.spidermiddlewares.httperror import HttpError
 from scrapy.utils.project import get_project_settings
 from twisted.internet.error import DNSLookupError, TCPTimedOutError
 
-from airline_scraper.utils import load_pairs_to_scrape
+from ..utils import load_pairs_to_scrape
 
 
 class RyanairSpider(scrapy.Spider):
@@ -66,7 +66,7 @@ class RyanairSpider(scrapy.Spider):
                     continue
 
                 requests = self._prepare_request(station1, station2, period_start, period_end) + \
-                    self._prepare_request(station2, station1, period_start, period_end)
+                           self._prepare_request(station2, station1, period_start, period_end)
 
                 for request in requests:
                     yield request
@@ -93,7 +93,7 @@ class RyanairSpider(scrapy.Spider):
 
             for available_flight in available_flights:
                 yield {
-                    'day': available_flight['departureDate'],
+                    'flight_date': available_flight['departureDate'],
                     'source': source,
                     'destination': destination,
                     'price': available_flight['price']['value'],
