@@ -19,20 +19,27 @@ class AirlineScraperPipeline:
     )
 
     def __init__(self):
+        self.topic = os.environ['KAFKA_TOPIC']
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    def process_item(self, item, _spider):
+        self.producer.send(self.topic, item)
+
+    def open_spider(self, spider):
         self.producer = KafkaProducer(
             bootstrap_servers=os.environ['KAFKA_BOOTSTRAP_BROKERS'].split(','),
             security_protocol='PLAINTEXT',
             value_serializer=lambda v: json.dumps(v).encode('utf-8'),
         )
-        self.topic = os.environ['KAFKA_TOPIC']
-        self.logger = logging.getLogger(self.__class__.__name__)
 
         if self.producer.bootstrap_connected() is False:
-            self.logger.error(f'Kafka producer could not connect to {os.environ["KAFKA_BOOTSTRAP_BROKERS"]}')
-            raise ConnectionError(f'Kafka producer could not connect to {os.environ["KAFKA_BOOTSTRAP_BROKERS"]}')
+            raise ConnectionError(
+                f'Kafka producer could not connect to {os.environ["KAFKA_BOOTSTRAP_BROKERS"]} for spider {spider.name}'
+            )
 
-        self.logger.info(f'Kafka producer connected to {os.environ["KAFKA_BOOTSTRAP_BROKERS"]}')
+        self.logger.info(
+            f'Kafka producer connected to {os.environ["KAFKA_BOOTSTRAP_BROKERS"]} for spider {spider.name}'
+        )
 
-    def process_item(self, item, _spider):
-        self.logger.info(f'Sending {item} to kafka')
-        self.producer.send(self.topic, item)
+    def close_spider(self, _spider):
+        self.producer.close()

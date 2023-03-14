@@ -1,6 +1,26 @@
 ---
 - name: Pipeline Up
   hosts: localhost
+  pre_tasks:
+    - name: Set routes to scrape
+      set_fact:
+        routes:
+          - - BSL
+            - AMS
+          - - BSL
+            - NCE
+          - - BSL
+            - LIS
+          - - BSL
+            - OPO
+          - - BSL
+            - IBZ
+          - - BSL
+            - OTP
+          - - GVA
+            - OTP
+          - - OTP
+            - BSL
   tasks:
     - name: Check Dependencies
       block:
@@ -19,10 +39,12 @@
         kafka_topics:
           - flights
 
-    - name: Deploy Infra
+    - name: Deploy Containers
       ansible.builtin.command: >-
         docker compose -f ../docker-compose.yml up --detach --build --force-recreate
       changed_when: false
+      environment:
+        PAIRS_TO_SCRAPE: '{{ routes | to_json }}'
 
     - name: Init Kafka
       block:
