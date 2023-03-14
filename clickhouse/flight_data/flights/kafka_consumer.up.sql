@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS flight_data.kafka_queue
     price Float32,
     currency String,
     company String,
-    scrape_date Date,
+    scrape_date Date
 )
 ENGINE = Kafka()
 settings
@@ -15,7 +15,8 @@ settings
     kafka_group_name = 'clickhouse',
     kafka_format = 'JSONEachRow',
     kafka_thread_per_consumer = 0,
-    kafka_num_consumers = 1;
+    kafka_num_consumers = 1,
+    kafka_handle_error_mode = 'stream';
 
 CREATE MATERIALIZED VIEW IF NOT EXISTS  flight_data.kafka_queue_mv TO flight_data.flights AS
 SELECT *

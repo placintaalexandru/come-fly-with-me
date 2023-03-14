@@ -24,6 +24,8 @@ class WizzairSpider(Spider):
 
     PRICE_TYPES = [{'priceType': 'regular'}]
 
+    API_ENDPOINT = 'https://be.wizzair.com/16.2.0/Api/search/timetable'
+
     def __init__(self, *_args, **kwargs):
         super().__init__(self.name, **kwargs)
         settings = get_project_settings()
@@ -85,7 +87,7 @@ class WizzairSpider(Spider):
 
         return list(
             map(lambda extra: JsonRequest(
-                    url='https://be.wizzair.com/14.6.0/Api/search/timetable',
+                    url=self.__class__.API_ENDPOINT,
                     method='POST',
                     callback=self.parse,
                     errback=self.error_callback,

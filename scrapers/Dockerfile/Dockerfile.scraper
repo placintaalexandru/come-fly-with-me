@@ -1,7 +1,7 @@
-FROM python:3.8.10-slim
+FROM python:3.10-slim
 
 ARG USER=scraper
-ARG POETRY_HOME="/etc/poetry"
+ARG POETRY_HOME=/etc/poetry
 
 RUN adduser "${USER}"
 
