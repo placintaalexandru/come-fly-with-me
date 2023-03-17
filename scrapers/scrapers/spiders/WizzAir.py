@@ -24,7 +24,7 @@ class WizzairSpider(Spider):
 
     PRICE_TYPES = [{'priceType': 'regular'}]
 
-    API_ENDPOINT = 'https://be.wizzair.com/16.2.0/Api/search/timetable'
+    API_ENDPOINT = 'https://be.wizzair.com/16.3.0/Api/search/timetable'
 
     def __init__(self, *_args, **kwargs):
         super().__init__(self.name, **kwargs)
