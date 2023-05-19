@@ -1,0 +1,28 @@
+{
+    "WizzAir": [
+        {
+            "source": "GVA",
+            "destination": "OTP"
+        },
+        {
+            "source": "JMK",
+            "destination": "OTP"
+        },
+        {
+            "source": "BSL",
+            "destination": "OTP"
+        }
+    ],
+    "RyanAir": [
+        {
+            "source": "OTP",
+            "destination": "AMM"
+        }
+    ],
+    "EasyJet": [
+        {
+            "source": "BSL",
+            "destination": "AMS"
+        }
+    ]
+}

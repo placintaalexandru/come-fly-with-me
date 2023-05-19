@@ -3,15 +3,15 @@ FROM python:3.10-slim
 ARG USER=scraper
 ARG POETRY_HOME=/etc/poetry
 
-RUN adduser "${USER}"
-
-RUN apt-get update && \
+RUN adduser "${USER}" && \
+    apt-get update && apt-get upgrade && \
+    apt-get install -y curl cron && \
     pip3 install --upgrade pip && \
-    apt-get install -y curl cron procps && \
-    curl -sSL https://install.python-poetry.org | POETRY_HOME="${POETRY_HOME}" python3 -
-
-RUN chmod gu+rw /var/run && \
-    chmod gu+s /usr/sbin/cron
+    curl -sSL https://install.python-poetry.org | POETRY_HOME="${POETRY_HOME}" python3 - && \
+    chmod gu+rw /var/run && \
+    chmod gu+s /usr/sbin/cron && \
+    rm -rf /var/lib/apt/lists/* && \
+    apt-get remove -y curl
 
 # Required to be able to use poetry and installed Python packages by the non-root user
 ENV PATH="${POETRY_HOME}/bin:/home/${USER}/.local/bin:$PATH"
@@ -21,7 +21,6 @@ USER "${USER}"
 WORKDIR "/${USER}"
 
 COPY scrapers/scrapers ./scrapers
-
 COPY scrapers/poetry.lock scrapers/pyproject.toml scrapers/scrapy.cfg ./
 
 RUN poetry export --without-hashes | pip3 install -r /dev/stdin --user
