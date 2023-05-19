@@ -1,4 +1,4 @@
-# Scrapy settings for scrapers project
+# Scrapy's settings for scrapers project
 #
 # For simplicity, this file contains only settings considered important or
 # commonly used. You can find more settings consulting the documentation:
@@ -16,7 +16,8 @@ SPIDER_MODULES = ['scrapers.spiders']
 NEWSPIDER_MODULE = 'scrapers.spiders'
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
-# USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
+USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) ' \
+             'Chrome/113.0.0.0 Safari/537.36'
 
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = False
@@ -27,7 +28,7 @@ ROBOTSTXT_OBEY = False
 # Configure a delay for requests for the same website (default: 0)
 # See https://docs.scrapy.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-DOWNLOAD_DELAY = 5
+DOWNLOAD_DELAY = 10
 # The download delay setting will honor only one of:
 CONCURRENT_REQUESTS_PER_DOMAIN = 2
 # CONCURRENT_REQUESTS_PER_IP = 16
@@ -65,7 +66,7 @@ CONCURRENT_REQUESTS_PER_DOMAIN = 2
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    'scrapers.pipelines.AirlineScraperPipeline': 300,
+    'scrapers.pipelines.AirlineScraperPipeline': 0,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -80,11 +81,10 @@ AUTOTHROTTLE_START_DELAY = 5
 # Default 60
 AUTOTHROTTLE_MAX_DELAY = 100
 
-# The average number of requests Scrapy should be sending in parallel to
-# each remote server
-AUTOTHROTTLE_TARGET_CONCURRENCY = 0.2
+# The average number of requests Scrapy should be sending in parallel to each remote server
+AUTOTHROTTLE_TARGET_CONCURRENCY = 0.25
 # Enable showing throttling stats for every response received:
-# AUTOTHROTTLE_DEBUG = False
+AUTOTHROTTLE_DEBUG = False
 
 # Enable and configure HTTP caching (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html#httpcache-middleware-settings
@@ -107,11 +107,13 @@ RETRY_TIMES = 2
 DOWNLOADER_MIDDLEWARES = {
 }
 
+
 LOG_LEVEL = os.environ.get('LOG_LEVEL', logging.INFO)
 LOG_FORMAT = os.environ.get('LOG_FORMAT', '[%(name)s] %(asctime)s %(levelname)s: %(message)s')
 
-# Controls the environment variable that holds the pairs of stations to scrape
-ENVIRONMENT_SOURCE_PAIRS = 'PAIRS_TO_SCRAPE'
+ROUTES_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), os.environ.get('ROUTES_FILE', 'airline_routes.json')
+)
 
 # Want to scrape 6 months in advance
-PERIOD_MONTHS = timedelta(days=os.environ.get('MONTHS_TO_SCRAPE', 180))
+DAYS_TO_SCRAPE = timedelta(days=os.environ.get('DAYS_TO_SCRAPE', 180))

@@ -11,7 +11,6 @@ from kafka import KafkaProducer
 
 
 class AirlineScraperPipeline:
-
     __slots__ = (
         "producer",
         "topic",

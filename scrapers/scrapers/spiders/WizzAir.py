@@ -1,71 +1,74 @@
-import logging
-from typing import List
+import json
 
-from scrapy import Spider, Request
-from datetime import date, timedelta
+import scrapy
+import datetime
+
+
+from typing import List, Dict
+from scrapy import http
 from copy import deepcopy
-
-from scrapy.utils.project import get_project_settings
-from scrapy.spidermiddlewares.httperror import HttpError
-from twisted.internet.error import DNSLookupError
-from twisted.internet.error import TimeoutError, TCPTimedOutError
-from scrapy.http import JsonRequest, TextResponse
-
-from .. utils import load_pairs_to_scrape
+from . import base_spider
+from .. import airline_route
 
 
-class WizzairSpider(Spider):
+class WizzairSpider(base_spider.BaseSpider):
     name = 'WizzAir'
     allowed_domains = ['wizzair.com']
-    start_url = 'https://wizzair.com'
 
     # 42 is supported by Wizz Air -> 30 just to be safe
-    WINDOW_SIZE = timedelta(days=30)
+    WINDOW_SIZE = datetime.timedelta(days=30)
 
     PRICE_TYPES = [{'priceType': 'regular'}]
 
-    API_ENDPOINT = 'https://be.wizzair.com/16.3.0/Api/search/timetable'
+    API_ENDPOINT = 'https://be.wizzair.com/17.3.0/Api/search/timetable'
 
     def __init__(self, *_args, **kwargs):
-        super().__init__(self.name, **kwargs)
-        settings = get_project_settings()
-        logging.basicConfig(format=settings['LOG_FORMAT'], level=settings['LOG_LEVEL'])
+        super().__init__(self.name, self.__class__.WINDOW_SIZE, **kwargs)
+        self.cookies = {}
 
-        self.pairs = load_pairs_to_scrape(self.logger)
-        self.PERIOD_MONTHS = settings['PERIOD_MONTHS']
+    def _headers(self) -> Dict[str, str]:
+        headers = {
+            # From my experiments, this can also be empty
+            'Referer': 'https://wizzair.com/en-gb/flights/timetable',
+            'Content-Type': 'application/json',
+        }
 
-        self.logger.info(f'Spider {self.name} will scrape ahead {self.PERIOD_MONTHS} starting from {date.today()}.')
-        self.logger.info(f'Spider {self.name} will scrape {self.pairs}.')
+        if 'RequestVerificationToken' in self.cookies:
+            headers['X-Requestverificationtoken'] = self.cookies['RequestVerificationToken']
 
-    def start_requests(self):
-        start = date.today()
-        end = start + self.PERIOD_MONTHS
+        return headers
 
-        while start < end:
-            period_start, period_end = start, start + self.WINDOW_SIZE - timedelta(days=1)
+    def _update_cookies(self, response: http.TextResponse):
+        for header_name, header_value in response.headers.items():
+            # If WizzAir server doesn't want a cookie to be set, then don't set it
+            if header_name.decode('utf-8') != 'Set-Cookie':
+                continue
 
-            for station1, station2 in self.pairs:
-                if not isinstance(station1, str):
-                    logging.error(f'Station {station1} is not string')
-                    continue
+            for cookie_to_be_set in header_value:
+                cookie_parts = cookie_to_be_set.decode('utf-8').split(';')
 
-                if not isinstance(station2, str):
-                    logging.error(f'Station {station2} is not string')
-                    continue
+                for cookie_part in cookie_parts:
+                    # Take only first `=` into account
+                    name_and_value = cookie_part.strip().split('=', 1)
 
-                if station1 == station2:
-                    self.logger.warning(f'Identical pair ({station1},{station2}) found.')
-                    continue
+                    # Skip everything that does not have the form `key=value`
+                    if len(name_and_value) != 2:
+                        continue
 
-                requests = self._prepare_request(station1, station2, period_start, period_end) + \
-                    self._prepare_request(station2, station1, period_start, period_end)
+                    name, value = name_and_value
 
-                for request in requests:
-                    yield request
+                    # Minimal set of cookies so the thing works
+                    # if name != 'ASP.NET_SessionId' and name != 'RequestVerificationToken':
+                    #     continue
 
-            start = start + self.WINDOW_SIZE
+                    self.cookies[name] = value
 
-    def _prepare_request(self, source: str, destination: str, left_date: date, right_date: date) -> List[Request]:
+    def prepare_request(
+            self,
+            route: airline_route.Route,
+            left_date: datetime.date,
+            right_date: datetime.date
+    ) -> List[scrapy.Request]:
         def apply_extras(base_template: dict, extras: dict) -> dict:
             base_template.update(extras)
             return base_template
@@ -73,8 +76,8 @@ class WizzairSpider(Spider):
         base_request = {
             "flightList": [
                 {
-                    "departureStation": source,
-                    "arrivalStation": destination,
+                    "departureStation": route.source,
+                    "arrivalStation": route.destination,
                     "from": left_date.strftime("%Y-%m-%d"),
                     "to": right_date.strftime("%Y-%m-%d")
                 }
@@ -85,42 +88,29 @@ class WizzairSpider(Spider):
             "infantCount": 0
         }
 
-        return list(
-            map(lambda extra: JsonRequest(
+        result = []
+
+        for price_type in WizzairSpider.PRICE_TYPES:
+            result.append(
+                scrapy.Request(
                     url=self.__class__.API_ENDPOINT,
                     method='POST',
                     callback=self.parse,
                     errback=self.error_callback,
-                    data=apply_extras(deepcopy(base_request), extra),
-                ),
-                WizzairSpider.PRICE_TYPES)
-        )
+                    headers=self._headers(),
+                    cookies=self.cookies,
+                    body=json.dumps(apply_extras(deepcopy(base_request), price_type))
+                )
+            )
 
-    def error_callback(self, failure):
-        # log all failures
-        self.logger.error(repr(failure))
+        return result
 
-        # in case you want to do something special for some errors,
-        # you may need the failure's type:
-
-        if failure.check(HttpError):
-            # these exceptions come from HttpError spider middleware
-            # you can get the non-200 response
-            response = failure.value.response
-            self.logger.error('HttpError on %s', response.url)
-        elif failure.check(DNSLookupError):
-            # this is the original request
-            request = failure.request
-            self.logger.error('DNSLookupError on %s', request.url)
-        elif failure.check(TimeoutError, TCPTimedOutError):
-            request = failure.request
-            self.logger.error('TimeoutError on %s', request.url)
-
-    def parse(self, response: TextResponse, **kwargs):
+    def parse(self, response: http.TextResponse, **_kwargs):
         flights = response.json()
-        scrape_date = date.today().isoformat()
+        scrape_date = datetime.date.today().isoformat()
 
         self.logger.info(f'Received {len(flights)} flights from {response.url}')
+        self._update_cookies(response)
 
         try:
             for flight in flights['outboundFlights']:
@@ -133,5 +123,5 @@ class WizzairSpider(Spider):
                     'company': self.name,
                     'scrape_date': scrape_date
                 }
-        except KeyError as e:
-            self.logger.error(repr(e))
+        except KeyError as ke:
+            self.logger.error(repr(ke))

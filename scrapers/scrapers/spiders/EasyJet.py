@@ -1,24 +1,18 @@
-import logging
-
-from datetime import datetime, timedelta, date
-from typing import List, Optional, Tuple
+import datetime
+from typing import List, Optional, Tuple, Set
 
 import scrapy
-from scrapy import Request
-from scrapy.http import TextResponse, JsonRequest
-from scrapy.spidermiddlewares.httperror import HttpError
-from scrapy.utils.project import get_project_settings
-from twisted.internet.error import DNSLookupError, TCPTimedOutError
-
-from ..utils import load_pairs_to_scrape
+from scrapy import http
+from .. import airline_route
+from . import base_spider
 
 
-class EasyJetSpider(scrapy.Spider):
+class EasyJetSpider(base_spider.BaseSpider):
     name = 'EasyJet'
     allowed_domains = ['easyjet.com/']
     start_url = 'http://easyjet.com/'
 
-    WINDOW_SIZE = timedelta(days=30)
+    WINDOW_SIZE = datetime.timedelta(days=30)
 
     # EasyJet structures the offers in these 3 categories
     OFFER_TYPES = [
@@ -29,26 +23,36 @@ class EasyJetSpider(scrapy.Spider):
 
     API_ENDPOINT = 'https://gateway.prod.dohop.net/api/graphql'
 
+    custom_settings = {
+        'AUTOTHROTTLE_TARGET_CONCURRENCY': 10,
+        'AUTOTHROTTLE_ENABLED': False
+    }
+
     def __init__(self, *_args, **kwargs):
-        super().__init__(self.name, **kwargs)
-        settings = get_project_settings()
-        logging.basicConfig(format=settings['LOG_FORMAT'], level=settings['LOG_LEVEL'])
+        super().__init__(self.name, self.__class__.WINDOW_SIZE, **kwargs)
+        self.stations = self.stations_set()
 
-        self.pairs = load_pairs_to_scrape(self.logger)
-        self.PERIOD_MONTHS = settings['PERIOD_MONTHS']
+    def stations_set(self) -> Set[str]:
+        stations: Set[str] = set()
 
-        self.stations = set([station for pair in self.pairs for station in pair])
+        for route in self.routes:
+            stations.add(route.source)
+            stations.add(route.destination)
 
-        self.logger.info(f'Spider {self.name} will scrape ahead {self.PERIOD_MONTHS} starting from {date.today()}.')
-        self.logger.info(f'Spider {self.name} will scrape {self.pairs}.')
+        return stations
 
-    def _prepare_request(self, source: str, destination: str, left_date: date, right_date: date) -> List[Request]:
-        requests = []
-        step = timedelta(days=1)
+    def prepare_request(
+            self, 
+            route: airline_route.Route, 
+            left_date: datetime.date, 
+            right_date: datetime.date
+        ) -> List[scrapy.Request]:
+        requests: List[scrapy.Request] = []
+        step = datetime.timedelta(days=1)
 
         while left_date < right_date:
             requests.append(
-                JsonRequest(
+                http.JsonRequest(
                     url=self.__class__.API_ENDPOINT,
                     method='POST',
                     callback=self.parse,
@@ -85,8 +89,8 @@ class EasyJetSpider(scrapy.Spider):
                                 "language": "en",
                                 "currency": "EUR",
                             },
-                            "origin": source,
-                            "destination": destination,
+                            "origin": route.source,
+                            "destination": route.destination,
                             "departureDateString": f"{left_date}",
                             "returnDateString": None,
                             "passengerAges": [
@@ -102,36 +106,8 @@ class EasyJetSpider(scrapy.Spider):
 
         return requests
 
-    def start_requests(self):
-        start = date.today()
-        end = start + self.PERIOD_MONTHS
-
-        while start < end:
-            period_start, period_end = start, start + self.WINDOW_SIZE - timedelta(days=1)
-
-            for station1, station2 in self.pairs:
-                if not isinstance(station1, str):
-                    logging.error(f'Station {station1} is not string')
-                    continue
-
-                if not isinstance(station2, str):
-                    logging.error(f'Station {station2} is not string')
-                    continue
-
-                if station1 == station2:
-                    self.logger.warning(f'Identical pair ({station1},{station2}) found.')
-                    continue
-
-                requests = self._prepare_request(station1, station2, period_start, period_end) + \
-                           self._prepare_request(station2, station1, period_start, period_end)
-
-                for request in requests:
-                    yield request
-
-            start = start + self.WINDOW_SIZE
-
     # TODO: Look into why other stations are included
-    def parse(self, response: TextResponse, **kwargs):
+    def parse(self, response: http.TextResponse, **kwargs):
         def parse_offer(raw_offer: dict) -> Optional[Tuple[str, dict]]:
             outbound = raw_offer['itinerary']['outbound'][0]
 
@@ -140,7 +116,7 @@ class EasyJetSpider(scrapy.Spider):
                 return None
 
             return outbound['id'], {
-                'flight_date': datetime.fromisoformat(outbound['legs'][0]['departure'][:-1]).isoformat(),
+                'flight_date': datetime.datetime.fromisoformat(outbound['legs'][0]['departure'][:-1]).isoformat(),
                 'source': outbound['legs'][0]['origin']['code'],
                 'destination': outbound['legs'][0]['destination']['code'],
                 'price': raw_offer['price'],
@@ -150,7 +126,7 @@ class EasyJetSpider(scrapy.Spider):
             }
 
         data = response.json()
-        scrape_date = date.today().isoformat()
+        scrape_date = datetime.date.today().isoformat()
         ids = set()
 
         try:
@@ -180,23 +156,3 @@ class EasyJetSpider(scrapy.Spider):
                     self.logger.error(repr(ke))
         except KeyError as ke:
             self.logger.error(repr(ke))
-
-    def error_callback(self, failure):
-        # log all failures
-        self.logger.error(repr(failure))
-
-        # in case you want to do something special for some errors,
-        # you may need the failure's type:
-
-        if failure.check(HttpError):
-            # these exceptions come from HttpError spider middleware
-            # you can get the non-200 response
-            response = failure.value.response
-            self.logger.error('HttpError on %s', response.url)
-        elif failure.check(DNSLookupError):
-            # this is the original request
-            request = failure.request
-            self.logger.error('DNSLookupError on %s', request.url)
-        elif failure.check(TimeoutError, TCPTimedOutError):
-            request = failure.request
-            self.logger.error('TimeoutError on %s', request.url)

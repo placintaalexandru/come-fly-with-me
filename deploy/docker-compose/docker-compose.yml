@@ -35,6 +35,7 @@ services:
     environment:
       - KAFKA_BROKER_ID=1
       - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ENABLE_KRAFT=no
       - ALLOW_PLAINTEXT_LISTENER=yes
       - KAFKA_CFG_LISTENERS=DOCKER://:9092,EXTERNAL://:9093
       - KAFKA_CFG_ADVERTISED_LISTENERS=DOCKER://:9092,EXTERNAL://localhost:9093
@@ -60,15 +61,14 @@ services:
         cron
         cd /scraper
         printenv > project_env
-        echo "0 10 * * * cd /scraper && export KAFKA_BOOTSTRAP_BROKERS=$$(cat project_env | grep KAFKA_BOOTSTRAP_BROKERS | cut -d "=" -f 2) && export PAIRS_TO_SCRAPE=$$(cat project_env | grep PAIRS_TO_SCRAPE | cut -d "=" -f 2) && export KAFKA_TOPIC=$$(cat project_env | grep KAFKA_TOPIC | cut -d "=" -f 2) && /home/scraper/.local/bin/scrapy crawl WizzAir" > cron.txt
-        echo "0 10 * * * cd /scraper && export KAFKA_BOOTSTRAP_BROKERS=$$(cat project_env | grep KAFKA_BOOTSTRAP_BROKERS | cut -d "=" -f 2) && export PAIRS_TO_SCRAPE=$$(cat project_env | grep PAIRS_TO_SCRAPE | cut -d "=" -f 2) && export KAFKA_TOPIC=$$(cat project_env | grep KAFKA_TOPIC | cut -d "=" -f 2) && /home/scraper/.local/bin/scrapy crawl RyanAir" >> cron.txt
-        echo "0 10 * * * cd /scraper && export KAFKA_BOOTSTRAP_BROKERS=$$(cat project_env | grep KAFKA_BOOTSTRAP_BROKERS | cut -d "=" -f 2) && export PAIRS_TO_SCRAPE=$$(cat project_env | grep PAIRS_TO_SCRAPE | cut -d "=" -f 2) && export KAFKA_TOPIC=$$(cat project_env | grep KAFKA_TOPIC | cut -d "=" -f 2) && /home/scraper/.local/bin/scrapy crawl EasyJet" >> cron.txt
+        echo "20 18 * * * cd /scraper && export KAFKA_BOOTSTRAP_BROKERS=$$(cat project_env | grep KAFKA_BOOTSTRAP_BROKERS | cut -d "=" -f 2) && export KAFKA_TOPIC=$$(cat project_env | grep KAFKA_TOPIC | cut -d "=" -f 2) && /home/scraper/.local/bin/scrapy crawl WizzAir" > cron.txt
+        echo "20 18 * * * cd /scraper && export KAFKA_BOOTSTRAP_BROKERS=$$(cat project_env | grep KAFKA_BOOTSTRAP_BROKERS | cut -d "=" -f 2) && export KAFKA_TOPIC=$$(cat project_env | grep KAFKA_TOPIC | cut -d "=" -f 2) && /home/scraper/.local/bin/scrapy crawl RyanAir" >> cron.txt
+        echo "20 18 * * * cd /scraper && export KAFKA_BOOTSTRAP_BROKERS=$$(cat project_env | grep KAFKA_BOOTSTRAP_BROKERS | cut -d "=" -f 2) && export KAFKA_TOPIC=$$(cat project_env | grep KAFKA_TOPIC | cut -d "=" -f 2) && /home/scraper/.local/bin/scrapy crawl EasyJet" >> cron.txt
         crontab -u $$(whoami) /scraper/cron.txt
         tail -f /dev/null
     # TODO: make KAFKA_BOOTSTRAP_BROKERS env dependant
     environment:
       - KAFKA_BOOTSTRAP_BROKERS=kafka:9092
-      - PAIRS_TO_SCRAPE=${PAIRS_TO_SCRAPE}
       - KAFKA_TOPIC=flights
 
   clickhouse:
