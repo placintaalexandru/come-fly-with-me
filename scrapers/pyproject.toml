@@ -1,14 +1,12 @@
 [tool.poetry]
-name = "airline-scraper"
+name = "come-fly-with-me"
 version = "0.1.0"
 description = ""
-authors = ["Alexandru Placinta <alexandru.placinta@nexthink.com>"]
-readme = "README.md"
-packages = [{include = "airline_scraper"}]
+authors = ["Alexandru Placinta <placintaalexandru1@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-scrapy = "2.7.1"
+scrapy = "^2.9.0"
 kafka-python = "2.0.2"
 dataclasses-json = "0.5.7"
 fastapi = "0.95.1"
