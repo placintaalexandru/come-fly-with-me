@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "come-fly-with-me"
-version = "0.1.0"
+version = "0.1.1"
 description = ""
 authors = ["Alexandru Placinta <placintaalexandru1@gmail.com>"]
 
@@ -9,8 +9,6 @@ python = "^3.10"
 scrapy = "^2.9.0"
 kafka-python = "2.0.2"
 dataclasses-json = "0.5.7"
-fastapi = "0.95.1"
-uvicorn = "0.21.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "7.3.1"
