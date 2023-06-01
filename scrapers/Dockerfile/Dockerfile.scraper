@@ -1,28 +1,54 @@
-FROM python:3.10-slim
+FROM python:3.10-slim as python-base
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYSETUP_PATH="/opt/pysetup"
+
+ENV PATH="$PYSETUP_PATH/.venv/bin:$PATH"
+
+
+FROM python-base as builder-base
+
+ENV POETRY_VESION="1.5.0" \
+    # Will create a .venv directory with dependencies where `poetry install` is run
+    POETRY_VIRTUALENVS_IN_PROJECT=true \
+    POETRY_HOME="/opt/poetry"
+
+ENV PATH="$POETRY_HOME/bin:$PATH"
+
+WORKDIR $PYSETUP_PATH
+
+COPY scrapers/poetry.lock scrapers/pyproject.toml ./
+
+RUN set -eux; \
+    apt-get update && apt-get install -y --no-install-recommends wget; \
+    wget -qO- https://install.python-poetry.org | python3 -; \
+    poetry install --no-interaction --without dev; \
+    # Remove .venv's pip
+    pip uninstall -y pip
+
+
+FROM python-base as release
 
 ARG USER=scraper
-ARG POETRY_HOME=/etc/poetry
 
-RUN adduser "${USER}" && \
-    apt-get update && apt-get upgrade && \
-    apt-get install -y curl cron && \
-    pip3 install --upgrade pip && \
-    curl -sSL https://install.python-poetry.org | POETRY_HOME="${POETRY_HOME}" python3 - && \
-    chmod gu+rw /var/run && \
-    chmod gu+s /usr/sbin/cron && \
-    rm -rf /var/lib/apt/lists/* && \
-    apt-get remove -y curl
+COPY --from=builder-base "$PYSETUP_PATH/.venv" "$PYSETUP_PATH/.venv"
 
-# Required to be able to use poetry and installed Python packages by the non-root user
-ENV PATH="${POETRY_HOME}/bin:/home/${USER}/.local/bin:$PATH"
+RUN set -eux; \
+    adduser --no-create-home --disabled-password "${USER}"; \
+    apt-get update && apt-get install -y --no-install-recommends cron; \
+    chmod gu+rw /var/run && chmod gu+s /usr/sbin/cron; \
+    # Remove python-base's pip
+    pip uninstall -y pip; \
+    rm -rf /var/lib/apt/lists/*;
+
+COPY scrapers/scrapers "/${USER}/scrapers"
+COPY scrapers/scrapy.cfg "/${USER}"
+
+RUN chown -R "${USER}:${USER}" "/$USER"
 
 USER "${USER}"
 
 WORKDIR "/${USER}"
-
-COPY scrapers/scrapers ./scrapers
-COPY scrapers/poetry.lock scrapers/pyproject.toml scrapers/scrapy.cfg ./
-
-RUN poetry export --without-hashes | pip3 install -r /dev/stdin --user
 
 ENTRYPOINT ["/bin/bash", "-c", "tail -f /dev/null"]
