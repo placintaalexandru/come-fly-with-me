@@ -59,12 +59,11 @@ services:
       - -c
       - |
         cron
-        cd /scraper
         printenv > project_env
-        echo "20 18 * * * cd /scraper && export KAFKA_BOOTSTRAP_BROKERS=$$(cat project_env | grep KAFKA_BOOTSTRAP_BROKERS | cut -d "=" -f 2) && export KAFKA_TOPIC=$$(cat project_env | grep KAFKA_TOPIC | cut -d "=" -f 2) && /home/scraper/.local/bin/scrapy crawl WizzAir" > cron.txt
-        echo "20 18 * * * cd /scraper && export KAFKA_BOOTSTRAP_BROKERS=$$(cat project_env | grep KAFKA_BOOTSTRAP_BROKERS | cut -d "=" -f 2) && export KAFKA_TOPIC=$$(cat project_env | grep KAFKA_TOPIC | cut -d "=" -f 2) && /home/scraper/.local/bin/scrapy crawl RyanAir" >> cron.txt
-        echo "20 18 * * * cd /scraper && export KAFKA_BOOTSTRAP_BROKERS=$$(cat project_env | grep KAFKA_BOOTSTRAP_BROKERS | cut -d "=" -f 2) && export KAFKA_TOPIC=$$(cat project_env | grep KAFKA_TOPIC | cut -d "=" -f 2) && /home/scraper/.local/bin/scrapy crawl EasyJet" >> cron.txt
-        crontab -u $$(whoami) /scraper/cron.txt
+        echo "20 18 * * * cd /$$(whoami) && export KAFKA_BOOTSTRAP_BROKERS=$$(cat project_env | grep KAFKA_BOOTSTRAP_BROKERS | cut -d "=" -f 2) && export KAFKA_TOPIC=$$(cat project_env | grep KAFKA_TOPIC | cut -d "=" -f 2) && /opt/pysetup/.venv/bin/scrapy crawl WizzAir" > cron.txt
+        echo "20 18 * * * cd /$$(whoami) && export KAFKA_BOOTSTRAP_BROKERS=$$(cat project_env | grep KAFKA_BOOTSTRAP_BROKERS | cut -d "=" -f 2) && export KAFKA_TOPIC=$$(cat project_env | grep KAFKA_TOPIC | cut -d "=" -f 2) && /opt/pysetup/.venv/bin/scrapy crawl RyanAir" >> cron.txt
+        echo "20 18 * * * cd /$$(whoami) && export KAFKA_BOOTSTRAP_BROKERS=$$(cat project_env | grep KAFKA_BOOTSTRAP_BROKERS | cut -d "=" -f 2) && export KAFKA_TOPIC=$$(cat project_env | grep KAFKA_TOPIC | cut -d "=" -f 2) && /opt/pysetup/.venv/bin/scrapy crawl EasyJet" >> cron.txt
+        crontab -u $$(whoami) cron.txt
         tail -f /dev/null
     # TODO: make KAFKA_BOOTSTRAP_BROKERS env dependant
     environment:
