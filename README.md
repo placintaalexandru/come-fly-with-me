@@ -49,7 +49,4 @@ request, unlike `RyanAir` and `EasyJet`, and will return me the price using the 
 ## Future plans
 
 * Add more spiders to collect data from more companies, if required.
-* Try to build a UI and get rid of `Grafana`, perhaps using `React` or `Svelte`. Not sure yet.
 * Make sure deployment strategies are more customizable (e.g: at the moment the `Kafka` settings are hardcoded).
-* Pack everything in a `Helm` chart, so it can be deployed to `Kubernetes`.
-* Allow the user to set which routes a spider scrapes via an API so redeployment is not required.
