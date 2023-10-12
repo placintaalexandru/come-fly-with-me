@@ -48,7 +48,7 @@ services:
     container_name: scrapers
     build:
       context: ../..
-      dockerfile: scrapers/Dockerfile/Dockerfile.scraper
+      dockerfile: scrapers/Dockerfile
     networks:
       - scraper-kafka
 
