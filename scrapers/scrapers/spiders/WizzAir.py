@@ -15,12 +15,12 @@ class WizzairSpider(base_spider.BaseSpider):
     name = 'WizzAir'
     allowed_domains = ['wizzair.com']
 
-    # 42 is supported by Wizz Air -> 30 just to be safe
+    # Wizz Air - supports 42, but 30 just to be safe
     WINDOW_SIZE = datetime.timedelta(days=30)
 
     PRICE_TYPES = [{'priceType': 'regular'}]
 
-    API_ENDPOINT = 'https://be.wizzair.com/17.4.0/Api/search/timetable'
+    API_ENDPOINT = 'https://be.wizzair.com/19.1.0/Api/search/timetable'
 
     def __init__(self, *_args, **kwargs):
         super().__init__(self.name, self.__class__.WINDOW_SIZE, **kwargs)
