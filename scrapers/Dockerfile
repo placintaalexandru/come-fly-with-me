@@ -1,4 +1,4 @@
-FROM python:3.13.0b4-slim as python-base
+FROM python:3.14.0a1-slim as python-base
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
